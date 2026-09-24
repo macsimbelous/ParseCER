@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ParseCER": {
+      "commandName": "Project",
+      "commandLineArgs": "E:\\Downloads\\ecp"
+    }
+  }
+}
