@@ -7,6 +7,7 @@ using System.Runtime.ConstrainedExecution;
 using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
+using Spectre.Console;
 
 namespace ParseCER
 {
@@ -67,6 +68,7 @@ namespace ParseCER
                     //Console.WriteLine(cer.Subject);
                 }
             }
+            cer_list = cer_list.OrderBy(u => u.Data).ToList();
             PrintTable(cer_list);
             WriteCSV(cer_list, "./cer.csv");
             Console.WriteLine("Таблицаа сохранена в ./cer.csv");
@@ -77,6 +79,56 @@ namespace ParseCER
             return cert;
         }
         static void PrintTable(List<CerInfo> CerList)
+        {
+            var table = new Table();
+
+            // Настраиваем внешний вид таблицы (опционально)
+            table.Border(TableBorder.Rounded);
+            //table.ShowRowSeparators = true;
+            table.Title("[yellow]Список ЭЦП[/]");
+
+            table.AddColumn("ФИО");
+            table.AddColumn("Должность");
+            table.AddColumn("Дата окончания");
+            table.AddColumn("Дней осталось");
+
+            // Добавляем строки
+            foreach (CerInfo cer in CerList)
+            {
+                string name = cer.Name ?? "[grey]Аноним[/]";
+                string job = cer.JobTitle ?? "[grey]Должность не указана[/]";
+                int days_left = (cer.DataWT - DateTime.Now).Days;
+                string days_left_str;
+                if(days_left < 1)
+                {
+                    days_left_str = "[red]" + days_left.ToString() + "[/]";
+                }
+                else if(days_left < 30)
+                {
+                    days_left_str = "[yellow]" + days_left.ToString() + "[/]";
+                }
+                else
+                {
+                    days_left_str = "[green]" + days_left.ToString() + "[/]";
+                }
+                table.AddRow(name, job, cer.Data.ToString(), days_left_str);
+            }
+            // Выводим в консоль
+            AnsiConsole.Write(table);
+        }
+        static void WriteCSV(List<CerInfo> CerList, string FilePath)
+        {
+            var config = new CsvConfiguration(System.Globalization.CultureInfo.CurrentCulture);
+            config.Delimiter = ";";
+            //config.HasHeaderRecord = false;
+            using (var writer = new StreamWriter(FilePath))
+            using (var csv = new CsvWriter(writer, config))
+            {
+                csv.Context.RegisterClassMap<CerInfoMap>();
+                csv.WriteRecords(CerList);
+            }
+        }
+        static void PrintTableOld(List<CerInfo> CerList)
         {
             const int fio_len = -40;
             const int job_len = -60;
@@ -97,18 +149,6 @@ namespace ParseCER
                 Console.WriteLine($"| {cer.Name,fio_len} | {cer.JobTitle,job_len} | {cer.Data,data_len} | {(cer.DataWT - DateTime.Now).Days,days_len} |");
             }
             Console.WriteLine(new string('-', row_len));
-        }
-        static void WriteCSV(List<CerInfo> CerList, string FilePath)
-        {
-            var config = new CsvConfiguration(System.Globalization.CultureInfo.CurrentCulture);
-            config.Delimiter = ";";
-            //config.HasHeaderRecord = false;
-            using (var writer = new StreamWriter(FilePath))
-            using (var csv = new CsvWriter(writer, config))
-            {
-                csv.Context.RegisterClassMap<CerInfoMap>();
-                csv.WriteRecords(CerList);
-            }
         }
     }
     public class CerInfo
